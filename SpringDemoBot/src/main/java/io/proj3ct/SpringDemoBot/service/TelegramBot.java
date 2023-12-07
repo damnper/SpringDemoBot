@@ -70,6 +70,15 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             long chatId = update.getMessage().getChatId();
 
+            if (messageText.contains("/send") && config.getOwnerId() == chatId) {
+                var textToSend = messageText.substring(messageText.indexOf(" "));
+                var users = userRepository.findAll();
+                for (User user: users) {
+                    sendMessage(user.getChatId(), textToSend);
+                }
+            }
+
+
             switch (messageText) {
                 case "/start":
                     registerUser(update.getMessage());
@@ -79,7 +88,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendMessage(chatId, HELP_TEXT);
                     break;
                 case "/register":
-
                     register(chatId);
                     break;
                 default:
@@ -119,8 +127,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
 
             }
-
-
         }
     }
 

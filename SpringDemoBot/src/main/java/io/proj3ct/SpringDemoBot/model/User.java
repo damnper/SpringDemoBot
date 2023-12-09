@@ -6,10 +6,8 @@ import java.sql.Timestamp;
 
 @Entity(name = "usersDataTable")
 public class User {
-
     @Id
     private Long chatId;
-
     private String firstName;
     private String lastName;
     private String userName;

@@ -1,10 +1,13 @@
 package io.proj3ct.SpringDemoBot.service;
 
 import io.proj3ct.SpringDemoBot.config.BotConfig;
+import io.proj3ct.SpringDemoBot.model.Ads;
+import io.proj3ct.SpringDemoBot.model.AdsRepository;
 import io.proj3ct.SpringDemoBot.model.User;
 import io.proj3ct.SpringDemoBot.model.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -30,31 +33,39 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private AdsRepository adsRepository;
     final BotConfig config;
 
-    static final String HELP_TEXT = "This bot is created to demonstrate Spring capabilities.\n\n" +
-            "You can execute commands from the main menu on the left or by typing a command:\n\n" +
-            "Type /start to see a welcome message\n\n" +
-            "Type /mydata to see data stored about yourself\n\n" +
-            "Type /help to see this message again";
+    static final String HELP_TEXT = """
+            Этот бот создан для рассылки сообщений.
 
+            Вы можете выполнить команды из основного меню слева или ввести команду вручную:
+
+            Нажмите /start для главного меню
+
+            Нажмите /subscribe, чтобы оформить подписку на рассылку новостей и уведомлений
+
+            Нажмите /delete, чтобы удалить свои данные и отписаться от рассылки новостей и уведомлений""";
+
+    static final String COMMAND_NOT_EXIST_TEXT = "Извините, не удалось распознать команду. Если у вас есть вопросы или вам нужна помощь, введите /help.";
+    static final String SUBSCRIBE_TRUE_TEXT = "Спасибо за подписку! Теперь вы будете получать уведомления от нашего бота. Оставайтесь в курсе последних новостей и событий.";
+    static final String SUBSCRIBE_FALSE_TEXT = "Понимаем ваш выбор. Если в будущем вы решите подписаться на уведомления, мы будем готовы предоставить вам актуальную информацию. Спасибо за внимание!";
     static final String YES_BUTTON = "YES_BUTTON";
     static final String NO_BUTTON = "NO_BUTTON";
-
     static final String ERROR_TEXT = "Error occurred: ";
 
     public TelegramBot(BotConfig config) {
         this.config = config;
         List<BotCommand> listOfCommands = new ArrayList<>();
-        listOfCommands.add(new BotCommand("/start", "get a welcome message"));
-        listOfCommands.add(new BotCommand("/mydata", "get your data stored"));
-        listOfCommands.add(new BotCommand("/deletedata", "delete my data"));
-        listOfCommands.add(new BotCommand("/help", "info how to use this bot"));
-        listOfCommands.add(new BotCommand("/settings", "set your preferences"));
+        listOfCommands.add(new BotCommand("/start", "Главное меню"));
+        listOfCommands.add(new BotCommand("/subscribe", "Подписаться на рассылку"));
+        listOfCommands.add(new BotCommand("/delete", "Отписаться и удалить свои данные"));
+        listOfCommands.add(new BotCommand("/help", "Помощь по управлению ботом"));
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e){
-            log.error("Error setting bot;s command list: " + e.getMessage());
+            log.error("Ошибка в установке команд бота: " + e.getMessage());
         }
     }
 
@@ -68,33 +79,36 @@ public class TelegramBot extends TelegramLongPollingBot {
         return config.getToken();
     }
 
+    /*Этот метод вызывается при получении нового сообщения от пользователя
+    Обработка полученного обновления (например, текстового сообщения, команды и т.д.)
+    update содержит информацию о сообщении, которое было получено*/
     @Override
     public void onUpdateReceived(Update update) {
-        if(update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();
+        if(update.hasMessage() && update.getMessage().hasText()) { // Проверка: пришло ли сообщение и имеет ли сообщение текст
+            String messageText = update.getMessage().getText(); // Текст сообщения
 
-            long chatId = update.getMessage().getChatId();
+            long chatId = update.getMessage().getChatId(); // ID пользователя
 
-            if (messageText.contains("/send") && config.getOwnerId() == chatId) {
-                var textToSend = messageText.substring(messageText.indexOf(" "));
-                var users = userRepository.findAll();
+            if (messageText.contains("/send") && config.getOwnerId() == chatId) { // Проверка: сообщение /send от владельца
+                var textToSend = messageText.substring(messageText.indexOf(" ")); // Забираем все сообщение после /send
+                var users = userRepository.findAll(); // Забираем из БД всех пользователей
                 for (User user: users) {
-                    prepareAndSendMessage(user.getChatId(), textToSend);
+                    prepareAndSendMessage(user.getChatId(), textToSend); // каждому пользователю из БД отправляем сообщение
                 }
             } else {
                 switch (messageText) {
-                    case "/start":
-                        registerUser(update.getMessage());
+                    case "/start": // запуск бота
                         startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
                         break;
-                    case "/help":
+                    case "/subscribe": // подписаться на рассылку
+                        register(chatId);
+                        // registerUser(update.getMessage());
+                        break;
+                    case "/help": // инструкция
                         prepareAndSendMessage(chatId, HELP_TEXT);
                         break;
-                    case "/register":
-                        register(chatId);
-                        break;
                     default:
-                        prepareAndSendMessage(chatId, "Sorry, command was not recognized");
+                        prepareAndSendMessage(chatId, COMMAND_NOT_EXIST_TEXT);
                 }
             }
 
@@ -104,13 +118,32 @@ public class TelegramBot extends TelegramLongPollingBot {
             long chatId= update.getCallbackQuery().getMessage().getChatId();
 
             if (callbackData.equals(YES_BUTTON)) {
-                String text = "you pressed YES button";
-                executeEditMessageText(text, chatId, messageId);
+                executeEditMessageText(SUBSCRIBE_TRUE_TEXT, chatId, messageId);
+                registerUser(update.getCallbackQuery().getMessage());
 
             } else if (callbackData.equals(NO_BUTTON)) {
-                String text = "you pressed NO button";
-                executeEditMessageText(text, chatId, messageId);
+                executeEditMessageText(SUBSCRIBE_FALSE_TEXT, chatId, messageId);
             }
+        }
+    }
+
+    private void registerUser(Message msg) {
+
+        if (userRepository.findById(msg.getChatId()).isEmpty()) {
+
+            var chatId = msg.getChatId();
+            var chat = msg.getChat();
+
+            User user = new User();
+
+            user.setChatId(chatId);
+            user.setFirstName(chat.getFirstName());
+            user.setLastName(chat.getLastName());
+            user.setUserName(chat.getUserName());
+            user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
+
+            userRepository.save(user);
+            log.info("User saved: " + user);
         }
     }
 
@@ -118,19 +151,19 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
-        message.setText("Do you really want to register?");
+        message.setText("Вы хотите подписаться на рассылку уведомлений?");
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
         var yesButton = new InlineKeyboardButton();
 
-        yesButton.setText("Yes");
+        yesButton.setText("Да");
         yesButton.setCallbackData(YES_BUTTON);
 
         var noButton = new InlineKeyboardButton();
 
-        noButton.setText("No");
+        noButton.setText("Нет");
         noButton.setCallbackData(NO_BUTTON);
 
         rowInline.add(yesButton);
@@ -167,29 +200,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void registerUser(Message msg) {
-
-        if (userRepository.findById(msg.getChatId()).isEmpty()) {
-
-            var chatId = msg.getChatId();
-            var chat = msg.getChat();
-
-            User user = new User();
-
-            user.setChatId(chatId);
-            user.setFirstName(chat.getFirstName());
-            user.setLastName(chat.getLastName());
-            user.setUserName(chat.getUserName());
-            user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
-
-            userRepository.save(user);
-            log.info("User saved: " + user);
-        }
-    }
-
     private void startCommandReceived(long chatId, String name) {
 
-        String answer = "Hi, " + name + ", nice to meet you!";
+        String answer = "Добро пожаловать, " + name + "! Мы рады приветствовать вас.";
 
         log.info("Replied to user " + name);
 
@@ -233,5 +246,17 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setText(textToSend);
         executeMessage(message);
     }
+
+    /*@Scheduled(cron = "${cron.scheduler}")
+    private void sendAds() {
+        var ads = adsRepository.findAll();
+        var users = userRepository.findAll();
+
+        for (Ads ad: ads) {
+            for (User user: users) {
+                prepareAndSendMessage(user.getChatId(), ad.getAd());
+            }
+        }
+    }*/
 }
 

@@ -1,13 +1,12 @@
 package io.proj3ct.SpringDemoBot.service;
 
 import io.proj3ct.SpringDemoBot.config.BotConfig;
-import io.proj3ct.SpringDemoBot.model.Ads;
 import io.proj3ct.SpringDemoBot.model.AdsRepository;
 import io.proj3ct.SpringDemoBot.model.User;
 import io.proj3ct.SpringDemoBot.model.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -26,7 +25,6 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j
@@ -55,30 +53,39 @@ public class TelegramBot extends TelegramLongPollingBot {
     static final String SUBSCRIBE_FALSE_TEXT = "Понимаем ваш выбор. Если в будущем Вы решите подписаться на уведомления, Мы будем готовы предоставить вам актуальную информацию. Спасибо за внимание!";
     static final String UNSUBSCRIBE_TRUE_TEXT = """
             Успешная отписка.
-            
+                        
             Вы больше не будете получать уведомления от нашего бота. Если вы решите вернуться, Мы всегда здесь для Вас! В случае вопросов или если у Вас возникнут какие-либо проблемы, не стесняйтесь связаться с нами.
-            
+                        
             Спасибо за то, что были с нами!""";
     static final String UNSUBSCRIBE_FALSE_TEXT = """
             Спасибо, что остаетесь с нами!
-            
+                        
             Ваш выбор не отписываться от наших уведомлений очень важен для нас. Если у вас возникнут вопросы или предложения, не стесняйтесь сообщить нам. Мы всегда здесь для вас!
             """;
 
+    static final String SUBSCRIBE_QUESTION_TEXT = "Вы хотите подписаться на рассылку уведомлений?";
+    static final String UNSUBSCRIBE_QUESTION_TEXT = "Вы хотите отписаться от рассылки уведомлений?";
     static final String YES_BUTTON = "YES_BUTTON";
     static final String NO_BUTTON = "NO_BUTTON";
     static final String ERROR_TEXT = "Error occurred: ";
+    static final String USER_ALREADY_REGISTERED_TEXT = "Эй! Вы уже зарегистрированы у нас. \uD83E\uDD16\uD83C\uDF1F";
+    static final String NOT_SUBSCRIBED_WANT_TO_UNSUBSCRIBE_TEXT = "Эй! Вы еще не подписаны на наши уведомления. \uD83E\uDD16❌";
 
     public TelegramBot(BotConfig config) {
         this.config = config;
-        List<BotCommand> listOfCommands = new ArrayList<>();
-        listOfCommands.add(new BotCommand("/start", "Главное меню"));
-        listOfCommands.add(new BotCommand("/subscribe", "Подписаться на рассылку"));
-        listOfCommands.add(new BotCommand("/delete", "Отписаться от уведомлений и удалить свои данные"));
-        listOfCommands.add(new BotCommand("/help", "Помощь по управлению ботом"));
+        initializeCommands();
+    }
+
+    private void initializeCommands() {
+        List<BotCommand> listOfCommands = List.of(
+                new BotCommand("/start", "Главное меню"),
+                new BotCommand("/subscribe", "Подписаться на рассылку"),
+                new BotCommand("/delete", "Отписаться от уведомлений и удалить свои данные"),
+                new BotCommand("/help", "Помощь по управлению ботом")
+        );
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
-        } catch (TelegramApiException e){
+        } catch (TelegramApiException e) {
             log.error("Ошибка в установке команд бота: " + e.getMessage());
         }
     }
@@ -93,97 +100,143 @@ public class TelegramBot extends TelegramLongPollingBot {
         return config.getToken();
     }
 
-    /*Этот метод вызывается при получении нового сообщения от пользователя
-    Обработка полученного обновления (например, текстового сообщения, команды и т.д.)
-    update содержит информацию о сообщении, которое было получено*/
     @Override
     public void onUpdateReceived(Update update) {
-        if(update.hasMessage() && update.getMessage().hasText()) { // Проверка: пришло ли сообщение и имеет ли сообщение текст
-            String messageText = update.getMessage().getText(); // Текст сообщения
+        if (isTextMessage(update)) {
+            processTextMessage(update);
+        } else if (isCallbackQuery(update)) {
+            processCallbackQuery(update);
+        }
+    }
 
-            long chatId = update.getMessage().getChatId(); // ID пользователя
+    private boolean isTextMessage(Update update) {
+        return update.hasMessage() && update.getMessage().hasText();
+    }
 
-            if (messageText.contains("/send") && config.getOwnerId() == chatId) { // Проверка: сообщение /send от владельца
-                var textToSend = messageText.substring(messageText.indexOf(" ")); // Забираем все сообщение после /send
-                var users = userRepository.findAll(); // Забираем из БД всех пользователей
-                for (User user: users) {
-                    prepareAndSendMessage(user.getChatId(), textToSend); // каждому пользователю из БД отправляем сообщение
-                }
-            } else {
-                switch (messageText) {
-                    case "/start": // запуск бота
-                        startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
-                        break;
-                    case "/subscribe": // подписаться на рассылку
-                        register(chatId);
-                        // registerUser(update.getMessage());
-                        break;
-                    case "/delete": // отписаться от рассылки
-                        delete(chatId);
-                        break;
-                    case "/help": // инструкция
-                        prepareAndSendMessage(chatId, HELP_TEXT);
-                        break;
-                    default:
-                        prepareAndSendMessage(chatId, COMMAND_NOT_EXIST_TEXT);
-                }
-            }
+    private boolean isCallbackQuery(Update update) {
+        return update.hasCallbackQuery();
+    }
 
-        } else if (update.hasCallbackQuery()) { // Проверяем, является ли обновление callback-запросом
-            String callbackData = update.getCallbackQuery().getData(); // Получаем данные из callback-запроса (нажатия на кнопку)
-            long messageId = update.getCallbackQuery().getMessage().getMessageId(); // Получаем идентификатор сообщения, в котором была кнопка
-            long chatId= update.getCallbackQuery().getMessage().getChatId(); // Получаем идентификатор чата, в котором произошло событие
-            String messageText = update.getCallbackQuery().getMessage().getText();
-            // Проверяем, какая кнопка была нажата
-            if (callbackData.equals(YES_BUTTON)) { // Если была нажата кнопка "Да"
-                if (Objects.equals(messageText, "Вы хотите подписаться на рассылку уведомлений?")) {
-                    executeEditMessageText(SUBSCRIBE_TRUE_TEXT, chatId, messageId); // Изменяем текст сообщения на подтверждение подписки
-                    registerUser(update.getCallbackQuery().getMessage()); // Регистрируем пользователя (добавляем в базу данных)
-                } else if (Objects.equals(messageText, "Вы хотите отписаться от рассылки уведомлений?")) {
-                    executeEditMessageText(UNSUBSCRIBE_TRUE_TEXT, chatId, messageId);
-                    deleteUserData(update.getCallbackQuery().getMessage());
-                }
-            } else if (callbackData.equals(NO_BUTTON)) { // Если была нажата кнопка "Нет"
-                if (Objects.equals(messageText, "Вы хотите подписаться на рассылку уведомлений?")) {
-                    executeEditMessageText(SUBSCRIBE_FALSE_TEXT, chatId, messageId); // Изменяем текст сообщения на подтверждение отказа от подписки
-                } else if (Objects.equals(messageText, "Вы хотите отписаться от рассылки уведомлений?")) {
-                    executeEditMessageText(UNSUBSCRIBE_FALSE_TEXT, chatId, messageId);
-                }
-            }
+    private void processTextMessage(Update update) {
+        String messageText = update.getMessage().getText();
+        long chatId = update.getMessage().getChatId();
+
+        if (messageText.startsWith("/send") && config.getOwnerId() == chatId) {
+            processSendCommand(messageText, update);
+        } else {
+            processUserCommand(messageText, chatId, update);
+        }
+    }
+
+    private void processSendCommand(String messageText, Update update) {
+        var textToSend = messageText.substring(messageText.indexOf(" ")); // Забираем все сообщение после /send
+        var users = userRepository.findAll(); // Забираем из БД всех пользователей
+        for (User user : users) {
+            prepareAndSendMessage(user.getChatId(), textToSend); // каждому пользователю из БД отправляем сообщение
+        }
+    }
+
+    private void processUserCommand(String messageText, long chatId, Update update) {
+        switch (messageText) {
+            case "/start":
+                startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
+                break;
+            case "/subscribe", "Подписаться":
+                register(update.getMessage());
+                break;
+            case "/delete", "Отписаться":
+                delete(update.getMessage());
+                break;
+            case "Вывести мои данные":
+                showMyData(update.getMessage());
+                break;
+            case "/help":
+                prepareAndSendMessage(chatId, HELP_TEXT);
+                break;
+            default:
+                prepareAndSendMessage(chatId, COMMAND_NOT_EXIST_TEXT);
+        }
+    }
+
+    private void processCallbackQuery(Update update) {
+        String callbackData = update.getCallbackQuery().getData();
+        long messageId = update.getCallbackQuery().getMessage().getMessageId();
+        long chatId = update.getCallbackQuery().getMessage().getChatId();
+        String messageText = update.getCallbackQuery().getMessage().getText();
+
+        if (callbackData.equals(YES_BUTTON)) {
+            processYesButton(update, messageText, chatId, messageId);
+        } else if (callbackData.equals(NO_BUTTON)) {
+            processNoButton(messageText, chatId, messageId);
+        }
+    }
+
+    private void processYesButton(Update update, String messageText, long chatId, long messageId) {
+
+        if (messageText.equals(SUBSCRIBE_QUESTION_TEXT)) {
+            registerUser(update.getCallbackQuery().getMessage());
+        } else if (messageText.equals(UNSUBSCRIBE_QUESTION_TEXT)) {
+            deleteUserData(update.getCallbackQuery().getMessage());
+        }
+    }
+
+    private void processNoButton(String messageText, long chatId, long messageId) {
+
+        if (messageText.equals(SUBSCRIBE_QUESTION_TEXT)) {
+            executeEditMessageText(SUBSCRIBE_FALSE_TEXT, chatId, messageId);
+        } else if (messageText.equals(UNSUBSCRIBE_QUESTION_TEXT)) {
+            executeEditMessageText(UNSUBSCRIBE_FALSE_TEXT, chatId, messageId);
         }
     }
 
     private void registerUser(Message msg) {
 
-        if (userRepository.findById(msg.getChatId()).isEmpty()) { // Проверяем, не зарегистрирован ли уже пользователь с таким chatId
+        long chatId = msg.getChatId();
+        var chat = msg.getChat();
 
-            // Если пользователь с таким chatId не найден, выполняем регистрацию
-            var chatId = msg.getChatId();
-            var chat = msg.getChat();
+        User user = new User();
 
-            User user = new User();
+        // Заполняем данные пользователя
+        user.setChatId(chatId);
+        user.setFirstName(chat.getFirstName());
+        user.setLastName(chat.getLastName());
+        user.setUserName(chat.getUserName());
+        user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
 
-            // Заполняем данные пользователя
-            user.setChatId(chatId);
-            user.setFirstName(chat.getFirstName());
-            user.setLastName(chat.getLastName());
-            user.setUserName(chat.getUserName());
-            user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
-
-            // Сохраняем пользователя в базе данных
+        // Сохраняем пользователя в базе данных
+        try {
             userRepository.save(user);
-            log.info("User saved: " + user);
+            executeEditMessageText(SUBSCRIBE_TRUE_TEXT, chatId, msg.getMessageId());
+            log.info("User saved: {}", user);
+        } catch (DataAccessException e) {
+            log.error("Error saving user to the database: {}", e.getMessage());
+            // Обработка ошибки сохранения в базу данных
         }
     }
 
-    private void register(long chatId) {
+    private boolean isUserInDB(Message msg) { return userRepository.findById(msg.getChatId()).isPresent(); }
 
-        // Создаем новое сообщение
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId)); // Устанавливаем chatId
-        message.setText("Вы хотите подписаться на рассылку уведомлений?"); // Устанавливаем текст сообщения
+    private void register(Message msg) {
 
-        // Создаем встроенную клавиатуру
+        if (!isUserInDB(msg)) {
+            long chatId = msg.getChatId();
+            // Создаем новое сообщение
+            SendMessage message = new SendMessage();
+            message.setChatId(String.valueOf(chatId)); // Устанавливаем chatId
+            message.setText("Вы хотите подписаться на рассылку уведомлений?"); // Устанавливаем текст сообщения
+
+            // Создаем встроенную клавиатуру
+            InlineKeyboardMarkup markupInline = getKeyboardMarkup();
+            message.setReplyMarkup(markupInline);
+            // Отправляем сообщение
+            executeMessage(message);
+        } else {
+            prepareAndSendMessage(msg.getChatId(), USER_ALREADY_REGISTERED_TEXT);
+            log.info("User already exist: {}", msg.getChat().getFirstName() + " " + msg.getChat().getLastName());
+        }
+    }
+
+    private static InlineKeyboardMarkup getKeyboardMarkup() {
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
@@ -202,56 +255,63 @@ public class TelegramBot extends TelegramLongPollingBot {
         rowsInline.add(rowInline);
         // Устанавливаем встроенную клавиатуру для сообщения
         markupInline.setKeyboard(rowsInline);
-        message.setReplyMarkup(markupInline);
-        // Отправляем сообщение
-        executeMessage(message);
-
+        return markupInline;
     }
 
     private void deleteUserData(Message msg) {
 
         Optional<User> optionalUser = userRepository.findById(msg.getChatId());
-        if (optionalUser.isPresent()) {
-
-            // Если пользователь с таким chatId найден, выполняем удаление пользователя из базы данных
-            User user = optionalUser.get();
-
-            // Удаляем пользователя из базы данных
+        // Если пользователь с таким chatId найден, выполняем удаление пользователя из базы данных
+        User user = optionalUser.get();
+        // Удаляем пользователя из базы данных
+        try {
             userRepository.delete(user);
+            executeEditMessageText(UNSUBSCRIBE_TRUE_TEXT, msg.getChatId(), msg.getMessageId());
             log.info("User deleted: " + user);
+        } catch (DataAccessException e) {
+            log.error("Error delete user from the database: {}", e.getMessage());
+        }
+    }
+
+    private void delete(Message msg) {
+
+        if (isUserInDB(msg)) {
+            long chatId = msg.getChatId();
+            // Создаем новое сообщение
+            SendMessage message = new SendMessage();
+            message.setChatId(String.valueOf(chatId)); // Устанавливаем chatId
+            message.setText("Вы хотите отписаться от рассылки уведомлений?"); // Устанавливаем текст сообщения
+
+            // Создаем встроенную клавиатуру
+
+            InlineKeyboardMarkup markupInline = getInlineKeyboardMarkup();
+            message.setReplyMarkup(markupInline);
+            // Отправляем сообщение
+            executeMessage(message);
         } else {
+            prepareAndSendMessage(msg.getChatId(), NOT_SUBSCRIBED_WANT_TO_UNSUBSCRIBE_TEXT);
             log.info("User not found for chatId: " + msg.getChatId());
         }
     }
 
-    private void delete(long chatId) {
-        // Создаем новое сообщение
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId)); // Устанавливаем chatId
-        message.setText("Вы хотите отписаться от рассылки уведомлений?"); // Устанавливаем текст сообщения
+    private static InlineKeyboardMarkup getInlineKeyboardMarkup() {
+        return getKeyboardMarkup();
+    }
 
-        // Создаем встроенную клавиатуру
-        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-        List<InlineKeyboardButton> rowInline = new ArrayList<>();
-        // Создаем кнопку "Да"
-        var yesButton = new InlineKeyboardButton();
-        yesButton.setText("Да");
-        yesButton.setCallbackData(YES_BUTTON);
-        // Создаем кнопку "Нет"
-        var noButton = new InlineKeyboardButton();
-        noButton.setText("Нет");
-        noButton.setCallbackData(NO_BUTTON);
-        // Добавляем кнопки в строку
-        rowInline.add(yesButton);
-        rowInline.add(noButton);
-        // Добавляем строку с кнопками
-        rowsInline.add(rowInline);
-        // Устанавливаем встроенную клавиатуру для сообщения
-        markupInline.setKeyboard(rowsInline);
-        message.setReplyMarkup(markupInline);
-        // Отправляем сообщение
-        executeMessage(message);
+    private void showMyData(Message msg) {
+        long chatId = msg.getChatId();
+
+        Optional<User> optionalUser = userRepository.findById(chatId);
+
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+
+            // Логика отображения данных пользователя
+            prepareAndSendMessage(chatId, "Ваши данные:\n" + user.getUserDataDB());
+        } else {
+            prepareAndSendMessage(chatId, "Вы не подписаны на бота!");
+            log.info("User not found for chatId: {}", chatId);
+        }
     }
 
     private void executeEditMessageText(String text, long chatId, long messageId) {
@@ -292,28 +352,31 @@ public class TelegramBot extends TelegramLongPollingBot {
         // Создаем объект для настраиваемой клавиатуры
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         // Создаем список строк клавиатуры
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        // Создаем первую строку клавиатуры
-        KeyboardRow row = new KeyboardRow();
-        // Добавляем кнопки в первую строку
-        row.add("weather");
-        row.add("get random joke");
-        // Добавляем первую строку в список строк клавиатуры
-        keyboardRows.add(row);
-        // Создаем вторую строку клавиатуры
-        row = new KeyboardRow();
-        // Добавляем кнопки во вторую строку
-        row.add("register");
-        row.add("check my data");
-        row.add("delete my data");
-        // Добавляем вторую строку в список строк клавиатуры
-        keyboardRows.add(row);
+        List<KeyboardRow> keyboardRows = getKeyboardRows();
         // Устанавливаем список строк клавиатуры в объект клавиатуры
         keyboardMarkup.setKeyboard(keyboardRows);
         // Устанавливаем настраиваемую клавиатуру в сообщение
         message.setReplyMarkup(keyboardMarkup);
         // Отправляем сообщение
         executeMessage(message);
+    }
+
+    private static List<KeyboardRow> getKeyboardRows() {
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        // Создаем первую строку клавиатуры
+        KeyboardRow row = new KeyboardRow();
+        // Добавляем кнопки в первую строку
+        row.add("Подписаться");
+        row.add("Отписаться");
+        // Добавляем первую строку в список строк клавиатуры
+        keyboardRows.add(row);
+        // Создаем вторую строку клавиатуры
+        row = new KeyboardRow();
+        // Добавляем кнопки во вторую строку
+        row.add("Вывести мои данные");
+        // Добавляем вторую строку в список строк клавиатуры
+        keyboardRows.add(row);
+        return keyboardRows;
     }
 
     private void prepareAndSendMessage(long chatId, String textToSend) {

@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 // Эта аннотация помечает класс как сущность JPA (Java Persistence API),
 // представляющую объект, который может быть сохранен в базе данных.
@@ -30,5 +32,16 @@ public class User {
                 ", userName='" + userName + '\'' +
                 ", registeredAt=" + registeredAt +
                 '}';
+    }
+
+    public String getUserDataDB() {
+        LocalDate localDate = registeredAt.toLocalDateTime().toLocalDate();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        String formattedDate = localDate.format(formatter);
+
+        return "\nИмя: " + firstName + "\n" +
+                "Фамилия: " + lastName + "\n" +
+                "Имя пользователя: @" + userName + "\n" +
+                "Дата регистрации: " + formattedDate;
     }
 }

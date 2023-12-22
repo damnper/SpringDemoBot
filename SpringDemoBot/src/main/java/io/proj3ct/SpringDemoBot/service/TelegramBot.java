@@ -122,13 +122,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         long chatId = update.getMessage().getChatId();
 
         if (messageText.startsWith("/send") && config.getOwnerId() == chatId) {
-            processSendCommand(messageText, update);
+            processSendCommand(messageText);
         } else {
             processUserCommand(messageText, chatId, update);
         }
     }
 
-    private void processSendCommand(String messageText, Update update) {
+    private void processSendCommand(String messageText) {
         var textToSend = messageText.substring(messageText.indexOf(" ")); // Забираем все сообщение после /send
         var users = userRepository.findAll(); // Забираем из БД всех пользователей
         for (User user : users) {
@@ -165,13 +165,13 @@ public class TelegramBot extends TelegramLongPollingBot {
         String messageText = update.getCallbackQuery().getMessage().getText();
 
         if (callbackData.equals(YES_BUTTON)) {
-            processYesButton(update, messageText, chatId, messageId);
+            processYesButton(update, messageText);
         } else if (callbackData.equals(NO_BUTTON)) {
             processNoButton(messageText, chatId, messageId);
         }
     }
 
-    private void processYesButton(Update update, String messageText, long chatId, long messageId) {
+    private void processYesButton(Update update, String messageText) {
 
         if (messageText.equals(SUBSCRIBE_QUESTION_TEXT)) {
             registerUser(update.getCallbackQuery().getMessage());
@@ -232,7 +232,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             executeMessage(message);
         } else {
             prepareAndSendMessage(msg.getChatId(), USER_ALREADY_REGISTERED_TEXT);
-            log.info("User already exist: {}", msg.getChat().getFirstName() + " " + msg.getChat().getLastName());
+            log.warn("User already exist: {}", msg.getChat().getFirstName() + " " + msg.getChat().getLastName());
         }
     }
 
@@ -275,8 +275,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void delete(Message msg) {
 
+        long chatId = msg.getChatId();
         if (isUserInDB(msg)) {
-            long chatId = msg.getChatId();
             // Создаем новое сообщение
             SendMessage message = new SendMessage();
             message.setChatId(String.valueOf(chatId)); // Устанавливаем chatId
@@ -290,7 +290,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             executeMessage(message);
         } else {
             prepareAndSendMessage(msg.getChatId(), NOT_SUBSCRIBED_WANT_TO_UNSUBSCRIBE_TEXT);
-            log.info("User not found for chatId: " + msg.getChatId());
+            log.warn("User not found for chatId: " + chatId);
         }
     }
 
@@ -299,18 +299,18 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void showMyData(Message msg) {
-        long chatId = msg.getChatId();
 
+        long chatId = msg.getChatId();
         Optional<User> optionalUser = userRepository.findById(chatId);
 
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
-
             // Логика отображения данных пользователя
             prepareAndSendMessage(chatId, "Ваши данные:\n" + user.getUserDataDB());
         } else {
+
             prepareAndSendMessage(chatId, "Вы не подписаны на бота!");
-            log.info("User not found for chatId: {}", chatId);
+            log.warn("User not found for chatId: {}", chatId);
         }
     }
 
@@ -386,17 +386,16 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setText(textToSend);
         executeMessage(message); // Вызываем метод для выполнения отправки сообщения
     }
+}
 
-    /*@Scheduled(cron = "${cron.scheduler}")
+/*@Scheduled(cron = "${cron.scheduler}")
     private void sendAds() {
         var ads = adsRepository.findAll();
         var users = userRepository.findAll();
 
         for (Ads ad: ads) {
-            for (User user: users) {
+            for (User: users) {
                 prepareAndSendMessage(user.getChatId(), ad.getAd());
             }
         }
     }*/
-}
-

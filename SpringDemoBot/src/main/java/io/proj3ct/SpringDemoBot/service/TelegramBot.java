@@ -1,7 +1,6 @@
 package io.proj3ct.SpringDemoBot.service;
 
 import io.proj3ct.SpringDemoBot.config.BotConfig;
-import io.proj3ct.SpringDemoBot.model.AdsRepository;
 import io.proj3ct.SpringDemoBot.model.User;
 import io.proj3ct.SpringDemoBot.model.UserRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -33,8 +32,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Autowired
     private UserRepository userRepository;
-    @Autowired
-    private AdsRepository adsRepository;
+
     final BotConfig config;
 
     static final String HELP_TEXT = """
@@ -387,15 +385,3 @@ public class TelegramBot extends TelegramLongPollingBot {
         executeMessage(message); // Вызываем метод для выполнения отправки сообщения
     }
 }
-
-/*@Scheduled(cron = "${cron.scheduler}")
-    private void sendAds() {
-        var ads = adsRepository.findAll();
-        var users = userRepository.findAll();
-
-        for (Ads ad: ads) {
-            for (User: users) {
-                prepareAndSendMessage(user.getChatId(), ad.getAd());
-            }
-        }
-    }*/

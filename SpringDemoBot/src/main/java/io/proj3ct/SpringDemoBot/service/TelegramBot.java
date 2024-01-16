@@ -70,8 +70,8 @@ public class TelegramBot extends TelegramLongPollingBot {
     static final String YES_BUTTON = "YES_BUTTON";
     static final String NO_BUTTON = "NO_BUTTON";
     static final String CHOOSE_ROOM_COUNT = "Выберите количество комнат: ";
-    static final String ONE_ROOM_BUTTON = "ONE_ROOM_BUTTON";
-    static final String TWO_ROOM_BUTTON = "TWO_ROOM_BUTTON";
+    static final String ROOM_BUTTON = "ROOM_BUTTON_";
+
 
     static final String ERROR_TEXT = "Error occurred: ";
     static final String USER_ALREADY_REGISTERED_TEXT = "Эй! Вы уже зарегистрированы у нас. \uD83E\uDD16\uD83C\uDF1F";
@@ -84,7 +84,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<Pair<String, String>> foundApartments = new ArrayList<>();
 
         try {
-            Document doc = Jsoup.connect("https://kazan.cian.ru/snyat-kvartiru-1-komn-ili-2-komn/")
+            Document doc = Jsoup.connect("https://kazan.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&region=4777&room1=1&room2=1&room3=1&room4=1&room5=1&room6=1&room9=1&type=4")
                     .ignoreContentType(true)
                     .userAgent("Mozilla/5.0 (Windows; U; Windows NT 6.1; rv:2.2) Gecko/20110201")
                     .referrer("http://www.google.com")
@@ -104,25 +104,11 @@ public class TelegramBot extends TelegramLongPollingBot {
                 return foundApartments;
             }
 
-
         } catch (IOException e) {
             log.error("Ошибка при попытке подключения к сайту CIAN: " + e.getMessage());
         }
 
         return Collections.emptyList();
-    }
-
-    private boolean checkApartments(List<Pair<String, String>> foundApartments) {
-
-        String apartmentType = "квартира";
-
-        for (Pair<String, String> apartment : foundApartments) {
-            String description = apartment.getLeft();
-            if (description.contains(apartmentType)) {
-                return true;
-            }
-        }
-        return false;
     }
 
 
@@ -131,7 +117,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         List<Pair<String, String>> foundApartments = checkCian();
 
-        if (!foundApartments.isEmpty() && checkApartments(foundApartments)) {
+        if (!foundApartments.isEmpty()) {
             sendNotification(foundApartments);
         }
     }
@@ -168,7 +154,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             String lastPostedLink = user.getApartmentLink();
 
-            if(String.valueOf(description.charAt(0)).equals(apartment_type)) {
+            if(description.charAt(0) == (apartment_type.charAt(0))) {
                 if(chatId != null && !Objects.equals(lastPostedLink, link)) {
                     message.setChatId(String.valueOf(chatId));
                     message.setText("Новая квартира: " + description + "\nСсылка: " + link);
@@ -204,23 +190,31 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private static List<List<InlineKeyboardButton>> getRoomCountKeyboardMarkup() {
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-        List<InlineKeyboardButton> rowInlineOne = new ArrayList<>();
-        // Создаем кнопку "1"
-        var yesButton = new InlineKeyboardButton();
-        yesButton.setText("1");
-        yesButton.setCallbackData(ONE_ROOM_BUTTON);
-        // Добавляем кнопки в строку
-        rowInlineOne.add(yesButton);
 
-        List<InlineKeyboardButton> rowInlineTwo = new ArrayList<>();
-        // Создаем кнопку "2"
-        var noButton = new InlineKeyboardButton();
-        noButton.setText("2");
-        noButton.setCallbackData(TWO_ROOM_BUTTON);
-        rowInlineTwo.add(noButton);
-        // Добавляем строку с кнопками
-        rowsInline.add(rowInlineOne);
-        rowsInline.add(rowInlineTwo);
+        List<InlineKeyboardButton> rowInlineForStudio = new ArrayList<>();
+        var buttonForStudio = new InlineKeyboardButton();
+        buttonForStudio.setText("Студия");
+        buttonForStudio.setCallbackData(ROOM_BUTTON + "Студия");
+        rowInlineForStudio.add(buttonForStudio);
+        rowsInline.add(rowInlineForStudio);
+
+        for (int i = 1; i <= 6; i++) {
+            List<InlineKeyboardButton> rowInline = new ArrayList<>();
+
+            var button = new InlineKeyboardButton();
+
+            if(i == 6) {
+                button.setText(i + "+");
+                button.setCallbackData(ROOM_BUTTON + i);
+            } else {
+                button.setText(String.valueOf(i));
+                button.setCallbackData(ROOM_BUTTON + i);
+            }
+
+            rowInline.add(button);
+            rowsInline.add(rowInline);
+        }
+
         return rowsInline;
     }
 
@@ -328,7 +322,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         switch (callbackData) {
             case YES_BUTTON -> processYesButton(update, messageText);
             case NO_BUTTON -> processNoButton(messageText, chatId, messageId);
-            case ONE_ROOM_BUTTON, TWO_ROOM_BUTTON -> processRoomCountButton(update);
+            case "ROOM_BUTTON_Студия", "ROOM_BUTTON_1", "ROOM_BUTTON_2", "ROOM_BUTTON_3", "ROOM_BUTTON_4", "ROOM_BUTTON_5", "ROOM_BUTTON_6" -> processRoomCountButton(update);
         }
     }
 
@@ -351,24 +345,35 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void processRoomCountButton(Update update) {
-
         Optional<User> optionalUser = userRepository.findById(update.getCallbackQuery().getMessage().getChatId());
 
-        if(optionalUser.isPresent()) {
+        if (optionalUser.isPresent()) {
             User user = optionalUser.get();
+            String roomNumberButton = update.getCallbackQuery().getData();
+
             try {
-                if (update.getCallbackQuery().getData().contains(ONE_ROOM_BUTTON)) {
-                    user.setApartmentType("1");
-                } else if (update.getCallbackQuery().getData().contains(TWO_ROOM_BUTTON)) {
-                    user.setApartmentType("2");
+                String apartmentType = extractRoomType(roomNumberButton);
+                if (apartmentType != null) {
+                    user.setApartmentType(apartmentType);
+                    executeEditMessageText("Форма заполнена!", user.getChatId(), update.getCallbackQuery().getMessage().getMessageId());
+                    userRepository.save(user);
+                    log.info("Apartment's type saved: " + user);
+                } else {
+                    log.warn("Unsupported room number button: {}", roomNumberButton);
                 }
-                executeEditMessageText("Форма заполнена!", update.getCallbackQuery().getMessage().getChatId(), update.getCallbackQuery().getMessage().getMessageId());
-                userRepository.save(user);
-                log.info("Apartment's type saved: " + user);
             } catch (DataAccessException e) {
                 log.error("Error saving apartment's type for user: {}", e.getMessage());
             }
         }
+    }
+
+    private String extractRoomType(String roomNumberButton) {
+        // Извлекаем номер комнаты из текста callbackData
+        String[] parts = roomNumberButton.split("_");
+        if (parts.length == 3 && parts[0].equals("ROOM") && parts[1].equals("BUTTON")) {
+            return parts[2];
+        }
+        return null;
     }
 
     private void registerUser(Message msg) {

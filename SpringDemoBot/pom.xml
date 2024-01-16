@@ -23,6 +23,7 @@
 		<jaxb-api.version>2.3.0</jaxb-api.version>
 		<log4j2api.version>2.22.0</log4j2api.version>
 		<log4j2core.version>2.22.0</log4j2core.version>
+		<jsoup.version>1.17.1</jsoup.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -100,6 +101,12 @@
 			<groupId>javax.xml.bind</groupId>
 			<artifactId>jaxb-api</artifactId>
 			<version>${jaxb-api.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jsoup</groupId>
+			<artifactId>jsoup</artifactId>
+			<version>${jsoup.version}</version>
 		</dependency>
 
 	</dependencies>

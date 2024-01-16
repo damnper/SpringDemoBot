@@ -22,6 +22,9 @@ public class User {
     private String lastName;
     private String userName;
     private Timestamp registeredAt;
+    private String apartmentType;
+    private String apartmentDescription;
+    private String apartmentLink;
 
     @Override
     public String toString() {
@@ -30,7 +33,10 @@ public class User {
                 ", firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", userName='" + userName + '\'' +
-                ", registeredAt=" + registeredAt +
+                ", registeredAt='" + registeredAt + '\'' +
+                ", apartmentDescription='" + apartmentDescription + '\'' +
+                ", apartmentLink='" + apartmentLink + '\'' +
+                ", apartmentType=" + apartmentType +
                 '}';
     }
 
@@ -42,6 +48,9 @@ public class User {
         return "\nИмя: " + firstName + "\n" +
                 "Фамилия: " + lastName + "\n" +
                 "Имя пользователя: @" + userName + "\n" +
-                "Дата регистрации: " + formattedDate;
+                "Дата регистрации: " + formattedDate + "\n" +
+                "Тип квартиры: " + apartmentType  + "\n" +
+                "Описание последней квартиры: " + apartmentDescription  + "\n" +
+                "Ссылка на последнюю квартиру: " + apartmentLink;
     }
 }

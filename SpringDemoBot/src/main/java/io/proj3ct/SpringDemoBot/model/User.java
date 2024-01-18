@@ -8,6 +8,7 @@ import lombok.Setter;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 
 // Эта аннотация помечает класс как сущность JPA (Java Persistence API),
 // представляющую объект, который может быть сохранен в базе данных.
@@ -23,8 +24,8 @@ public class User {
     private String userName;
     private Timestamp registeredAt;
     private String apartmentType;
-    private String apartmentDescription;
-    private String apartmentLink;
+    private String apartmentDescription = "Отсутствует";
+    private String apartmentLink = "Отсутствует";
 
     @Override
     public String toString() {
@@ -49,8 +50,14 @@ public class User {
                 "Фамилия: " + lastName + "\n" +
                 "Имя пользователя: @" + userName + "\n" +
                 "Дата регистрации: " + formattedDate + "\n" +
-                "Тип квартиры: " + apartmentType  + "\n" +
+                "Тип квартиры: " + sortValues(apartmentType)  + "\n" +
                 "Описание последней квартиры: " + apartmentDescription  + "\n" +
                 "Ссылка на последнюю квартиру: " + apartmentLink;
+    }
+
+    private static String sortValues(String input) {
+        String[] values = input.split(",");
+        Arrays.sort(values);
+        return String.join(",", values);
     }
 }

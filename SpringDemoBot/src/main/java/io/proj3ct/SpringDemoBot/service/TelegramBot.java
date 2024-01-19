@@ -12,6 +12,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
@@ -40,9 +41,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     final BotConfig config;
 
     private static final String HELP_TEXT = """
-              Привет! 🌍🔎
+              _Привет!_ 🌍🔎
                                                                                                       
-              RoamAndHuntBot - Ваш личный ассистент в мире недвижимости! 🏡✨
+              *RoamAndHuntBot* - Ваш личный ассистент в мире недвижимости! 🏡✨
               
               🔍 *Как это работает?*
               1. Нажмите /subscribe, чтобы подписаться на уведомления о новых квартирах.
@@ -56,20 +57,21 @@ public class TelegramBot extends TelegramLongPollingBot {
               
               🔧 *Дополнительные команды:*
               - /addtype - добавить тип квартиры после подписки;
-              - /deletetype - удалить тип квартиры.
+              - /removetype - удалить тип квартиры.
               
               Теперь Вы в курсе! Давайте вместе искать Ваш новый уютный уголок! 🌟🏠""";
 
-    private static final String COMMAND_NOT_EXIST_TEXT = "Извините, не удалось распознать команду. Если у Вас есть вопросы или вам нужна помощь, введите /help.";
-    private static final String SUBSCRIBE_TRUE_TEXT = "Спасибо за подписку! Теперь Вы будете получать уведомления о новых квартирах от нашего бота. ";
-    private static final String SUBSCRIBE_FALSE_TEXT = "Понимаем ваш выбор. Если в будущем Вы решите подписаться на уведомления, Мы будем готовы предоставить вам актуальную информацию. Спасибо за внимание!";
-    private static final String UNSUBSCRIBE_TRUE_TEXT = """
-            Успешная отписка.
+    private static final String COMMAND_NOT_EXIST_TEXT = "_Извините, не удалось распознать команду._\n\nЕсли у Вас есть вопросы или вам нужна помощь, введите /help.";
+    private static final String SUBSCRIBE_TRUE_TEXT_1 = "_Спасибо за подписку!_\n\nТеперь Вы будете получать уведомления о новых квартирах от нашего бота. ";
+    private static final String SUBSCRIBE_TRUE_TEXT_2 = "Далее нужно заполнить *форму*, чтобы Мы уведомляли Вас только о квартирах определенного типа.";
+    private static final String SUBSCRIBE_FALSE_TEXT = "_Понимаем ваш выбор._\n\nЕсли в будущем Вы решите подписаться на уведомления, Мы будем готовы предоставить вам актуальную информацию. Спасибо за внимание!";
+    private static final String UNSUBSCRIBE_TRUE_TEXT_1 = """
+            _Успешная отписка._
                         
-            Вы больше не будете получать уведомления от нашего бота.
-            Спасибо за то, что были с нами!""";
+            Вы больше не будете получать уведомления от нашего бота.""";
+    private static final String UNSUBSCRIBE_TRUE_TEXT_2 = "_Спасибо за то, что были с нами!_";
     private static final String UNSUBSCRIBE_FALSE_TEXT = """
-            Спасибо, что остаетесь с нами!
+            _Спасибо, что остаетесь с нами!_
                         
             Ваш выбор не отписываться от наших уведомлений очень важен для нас.
             """;
@@ -80,22 +82,23 @@ public class TelegramBot extends TelegramLongPollingBot {
     private static final String NO_BUTTON = "NO_BUTTON";
     private static final String CHOOSE_ROOM_COUNT = "Выберите количество комнат: ";
     private static final String ROOM_BUTTON = "ROOM_BUTTON_";
-    private static final String TEXT_ADD_TYPE = "Какой тип квартиры Вы хотите добавить?";
     private static final String TEXT_ADD_TYPE_WRONG = """
-            Чтобы выполнить данную команду, сначала подпишитесь на уведомления, используя команду /subscribe.\uD83C\uDFE0✨
+            Чтобы выполнить данную команду, сначала *подпишитесь* на уведомления, используя команду /subscribe.\uD83C\uDFE0✨
             
-            В случае некорректного заполнения формы Вы сможете добавить нужные типы квартир с помощью команды /addtype или исключить ненужные с помощью /removetype. \uD83E\uDD16\uD83C\uDFE0""";
+            В случае некорректного заполнения формы Вы сможете добавить нужные типы квартир с помощью команды /addtype и/или исключить ненужные с помощью /removetype. \uD83E\uDD16\uD83C\uDFE0""";
 
     private static final String TEXT_REMOVE_TYPE = "Какой тип квартиры Вы хотите исключить?";
 
 
     private static final String ERROR_TEXT = "Error occurred: ";
-    private static final String USER_ALREADY_REGISTERED_TEXT = "Эй! Вы уже зарегистрированы у нас. \uD83E\uDD16\uD83C\uDF1F";
-    private static final String NOT_SUBSCRIBED_WANT_TO_UNSUBSCRIBE_TEXT = "Эй! Вы еще не подписаны на наши уведомления. \uD83E\uDD16❌";
+    private static final String USER_ALREADY_REGISTERED_TEXT = "_Эй!_\n\nВы уже зарегистрированы у нас. \uD83E\uDD16\uD83C\uDF1F";
+    private static final String NOT_SUBSCRIBED_WANT_TO_UNSUBSCRIBE_TEXT = "_Эй!_\n\nВы еще не подписаны на наши уведомления. \uD83E\uDD16❌";
 
     private static final String LINK_CONNECT_TO_CIAN = "https://kazan.cian.ru/cat.php?deal_type=rent&engine_version=2&offer_type=flat&region=4777&room1=1&room2=1&room3=1&room4=1&room5=1&room6=1&room9=1&sort=creation_date_desc&totime=-2&type=4";
     private static final String SELECTOR_DESCRIPTION = "span._93444fe79c--color_black_100--Ephi7";
     private static final String SELECTOR_LINK_TO_SEND = "a._93444fe79c--link--VtWj6";
+
+    private static  String LAST_CHECKED_LINK = "Some link";
 
     private Pair<String, String> checkCian() {
 
@@ -112,11 +115,15 @@ public class TelegramBot extends TelegramLongPollingBot {
             String description = Objects.requireNonNull(doc.selectFirst(SELECTOR_DESCRIPTION)).text();
             String link = Objects.requireNonNull(doc.selectFirst(SELECTOR_LINK_TO_SEND)).attr("href");
 
-            log.info("Успешно проверено и добавлено объявление: {}", description);
-            return Pair.of(description, link);
+
+            if (!link.equals(LAST_CHECKED_LINK)) {
+                LAST_CHECKED_LINK = link;
+                log.info("Ad has been successfully verified and added: {}", description);
+                return Pair.of(description, link);
+            }
 
         } catch (IOException e) {
-            log.error("Ошибка при попытке подключения к сайту CIAN: " + e.getMessage());
+            log.error("Error while trying to connect to the CIAN website " + e.getMessage());
         }
 
         return null;
@@ -142,10 +149,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             try {
                 if(message != null && !message.getChatId().isEmpty()) {
                     execute(message);
-                    log.info("Уведомление успешно отправлено, id: {}", chatId);
+                    log.info("Notification sent successfully, id: {}", chatId);
                 }
             } catch (TelegramApiException e) {
-                log.error("Ошибка при отправке уведомления: " + e.getMessage());
+                log.error("Error when sending a notification: " + e.getMessage());
             }
         }
         userRepository.saveAll(subscribedUsers);
@@ -166,7 +173,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText("Новая квартира: " + description + "\nСсылка: " + link);
+        message.setText("_Новая квартира в аренду!_\n\n*Описание:* " + description + "\n*Ссылка:* " + link + "\n\n#homehunt #новаяквартира #аренда");
+        message.setParseMode(ParseMode.MARKDOWN);
 
         user.setApartmentLink(link);
         user.setApartmentDescription(description);
@@ -270,7 +278,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 User user = optionalUser.get();
                 String apartmentTypeFromDB = user.getApartmentType();
 
-                prepareAndSendMessageWithReplyKeyboard(chatId, TEXT_ADD_TYPE, apartmentTypeFromDB, true);
+                prepareAndSendMessageWithReplyKeyboard(chatId, CHOOSE_ROOM_COUNT, apartmentTypeFromDB, true);
             }
         } else {
             prepareAndSendMessage(chatId, TEXT_ADD_TYPE_WRONG);
@@ -384,7 +392,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             case "/removetype":
                 removeType(update.getMessage());
                 break;
-            case "Вывести мои данные":
+            case "Показать профиль":
                 showMyData(update.getMessage());
                 break;
             case "/help":
@@ -442,7 +450,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 if (messageText.equals(TEXT_REMOVE_TYPE)) {
 
                     if (apartmentType.equals("Завершить")) {
-                        executeEditMessageText("Форма успешно изменена!", user.getChatId(), update.getCallbackQuery().getMessage().getMessageId());
+                        executeEditMessageText("_Форма успешно изменена!_\n\nОжидайте уведомлений о новых квартирах.", user.getChatId(), update.getCallbackQuery().getMessage().getMessageId());
                         log.info("Apartment's type changed: " + user);
                     } else {
                         String newApartmentType = getNewApartmentType(user, apartmentType);
@@ -456,7 +464,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                 } else {
                     if (apartmentType.equals("Завершить")) {
-                        executeEditMessageText("Форма заполнена!", user.getChatId(), update.getCallbackQuery().getMessage().getMessageId());
+                        executeEditMessageText("_Форма успешно заполнена!_\n\nМы уведомим Вас о новой квартире, если она будет размещена на сайте.", user.getChatId(), update.getCallbackQuery().getMessage().getMessageId());
                         log.info("Apartment's type saved: " + user);
                     } else if (validApartmentTypes.contains(apartmentType)) {
 
@@ -489,8 +497,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         String newApartmentType;
 
         if (apartmentTypeFromDB.charAt(apartmentTypeFromDB.length() - 1) == apartmentType.charAt(0)) {
+            newApartmentType = apartmentTypeFromDB.replace("," + apartmentType, "");
+        } else if (apartmentTypeFromDB.length() == 1) {
             newApartmentType = apartmentTypeFromDB.replace(apartmentType, "");
-
         } else {
             newApartmentType = apartmentTypeFromDB.replace(apartmentType + ",", "");
         }
@@ -499,9 +508,14 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private String extractRoomType(String roomNumberButton) {
         // Извлекаем номер комнаты из текста callbackData
-        String[] parts = roomNumberButton.split("_");
-        if (parts.length == 3 && parts[0].equals("ROOM") && parts[1].equals("BUTTON")) {
-            return parts[2];
+        try {
+            String[] parts = roomNumberButton.split("_");
+            if (parts.length == 3 && parts[0].equals("ROOM") && parts[1].equals("BUTTON")) {
+                return parts[2];
+            }
+
+        } catch (Exception e) {
+            log.error("Error when retrieving a room number: {}", e.getMessage());
         }
         return null;
     }
@@ -523,7 +537,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         // Сохраняем пользователя в базе данных
         try {
             userRepository.save(user);
-            executeEditMessageText(SUBSCRIBE_TRUE_TEXT, chatId, msg.getMessageId());
+            executeEditMessageText(SUBSCRIBE_TRUE_TEXT_1, chatId, msg.getMessageId());
+            sendMessage(chatId, SUBSCRIBE_TRUE_TEXT_2);
             log.info("User saved: {}", user);
 
             setupApartmentMonitoringForm(msg);
@@ -533,6 +548,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private boolean isUserInDB(Message msg) { return userRepository.findById(msg.getChatId()).isPresent(); }
+    private boolean isUserInDB(long chatId) {
+        return userRepository.existsById(chatId);
+    }
 
     private void register(Message msg) {
 
@@ -579,14 +597,17 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void deleteUserData(Message msg) {
 
-        Optional<User> optionalUser = userRepository.findById(msg.getChatId());
+        long chatId = msg.getChatId();
+        long messageId = msg.getMessageId();
+        Optional<User> optionalUser = userRepository.findById(chatId);
         // Если пользователь с таким chatId найден, выполняем удаление пользователя из базы данных
         if(optionalUser.isPresent()) {
             User user = optionalUser.get();
             // Удаляем пользователя из базы данных
             try {
                 userRepository.delete(user);
-                executeEditMessageText(UNSUBSCRIBE_TRUE_TEXT, msg.getChatId(), msg.getMessageId());
+                executeEditMessageText(UNSUBSCRIBE_TRUE_TEXT_1, chatId, messageId);
+                sendMessage(chatId, UNSUBSCRIBE_TRUE_TEXT_2);
                 log.info("User deleted: " + user);
             } catch (DataAccessException e) {
                 log.error("Error delete user from the database: {}", e.getMessage());
@@ -623,7 +644,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
             // Логика отображения данных пользователя
-            prepareAndSendMessage(chatId, "Ваши данные:\n" + user.getUserDataDB());
+            prepareAndSendMessage(chatId, "_Информация:_\n" + user.getUserDataDB());
         } else {
 
             prepareAndSendMessage(chatId, "Вы не подписаны на бота!");
@@ -637,6 +658,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setChatId(String.valueOf(chatId));
         message.setText(text);
         message.setMessageId((int) messageId);
+        message.setParseMode(ParseMode.MARKDOWN);
 
         try {
             execute(message); // Пытаемся выполнить редактирование сообщения
@@ -652,6 +674,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setChatId(String.valueOf(chatId));
         message.setText(text);
         message.setMessageId((int) messageId);
+        message.setParseMode(ParseMode.MARKDOWN);
         
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = getRoomCountKeyboardMarkup(apartmentTypeFromDB, addFlag);
@@ -686,10 +709,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         // Устанавливаем chatId и текст сообщения
         message.setChatId(String.valueOf(chatId));
         message.setText(textToSend);
+        message.setParseMode(ParseMode.MARKDOWN);
         // Создаем объект для настраиваемой клавиатуры
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         // Создаем список строк клавиатуры
-        List<KeyboardRow> keyboardRows = getKeyboardRows();
+        List<KeyboardRow> keyboardRows = getKeyboardRows(chatId);
         // Устанавливаем список строк клавиатуры в объект клавиатуры
         keyboardMarkup.setKeyboard(keyboardRows);
         // Устанавливаем настраиваемую клавиатуру в сообщение
@@ -698,22 +722,24 @@ public class TelegramBot extends TelegramLongPollingBot {
         executeMessage(message);
     }
 
-    private static List<KeyboardRow> getKeyboardRows() {
+    private List<KeyboardRow> getKeyboardRows(long chatId) {
+
         List<KeyboardRow> keyboardRows = new ArrayList<>();
-        // Создаем первую строку клавиатуры
         KeyboardRow row = new KeyboardRow();
-        // Добавляем кнопки в первую строку
-        row.add("Подписаться");
-        row.add("Отписаться");
-        // Добавляем первую строку в список строк клавиатуры
+
+        if (!isUserInDB(chatId)) {
+            row.add("Подписаться");
+        } else {
+            row.add("Отписаться");
+        }
         keyboardRows.add(row);
-        // Создаем вторую строку клавиатуры
         row = new KeyboardRow();
-        // Добавляем кнопки во вторую строку
-        row.add("Вывести мои данные");
-        // Добавляем вторую строку в список строк клавиатуры
+
+        if (isUserInDB(chatId)) { row.add("Показать профиль"); }
+
         keyboardRows.add(row);
         return keyboardRows;
+
     }
 
     private void prepareAndSendMessage(long chatId, String textToSend) {
@@ -721,6 +747,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         // Устанавливаем chatId и текст сообщения
         message.setChatId(String.valueOf(chatId));
         message.setText(textToSend);
+        message.setParseMode(ParseMode.MARKDOWN);
         executeMessage(message); // Вызываем метод для выполнения отправки сообщения
     }
 
@@ -729,6 +756,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         // Устанавливаем chatId и текст сообщения
         message.setChatId(String.valueOf(chatId));
         message.setText(textToSend);
+        message.setParseMode(ParseMode.MARKDOWN);
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = getRoomCountKeyboardMarkup(apartmentTypeFromDB, addFlag);

@@ -46,13 +46,10 @@ public class User {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
         String formattedDate = localDate.format(formatter);
 
-        return "\nИмя: " + firstName + "\n" +
-                "Фамилия: " + lastName + "\n" +
-                "Имя пользователя: @" + userName + "\n" +
-                "Дата регистрации: " + formattedDate + "\n" +
-                "Тип квартиры: " + sortValues(apartmentType)  + "\n" +
-                "Описание последней квартиры: " + apartmentDescription  + "\n" +
-                "Ссылка на последнюю квартиру: " + apartmentLink;
+        return "\n\uD83D\uDCC5 *Дата регистрации:* " + formattedDate + "\n\n" +
+                "\uD83C\uDFE0 *Выбранный тип квартиры:* " + sortValues(apartmentType)  + "\n\n" +
+                "\uD83D\uDCDD *Описание последней квартиры:* " + apartmentDescription  + "\n\n" +
+                "\uD83D\uDD17 *Ссылка на последнюю квартиру:* " + apartmentLink;
     }
 
     private static String sortValues(String input) {

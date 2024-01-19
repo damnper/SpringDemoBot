@@ -10,8 +10,8 @@ target/
 *.iws
 *.iml
 *.ipr
-
 .idea/
+
 
 src/main/resources/application.properties
 src/main/resources/logback.xml

@@ -12,7 +12,7 @@ target/
 *.iml
 *.ipr
 .idea/
-
+out/
 
 src/main/resources/application.properties
 src/main/resources/logback.xml

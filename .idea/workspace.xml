@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="d178a8a2-6392-4a6b-b229-b099065e1c55" name="Changes" comment="remove .idea folder">
+      <change beforePath="$PROJECT_DIR$/SpringDemoBot/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/SpringDemoBot/.gitignore" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "damnper"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings">
+    <option name="selectedUrlAndAccountId">
+      <UrlAndAccount>
+        <option name="accountId" value="e8d92ea3-6d27-4a67-aba4-bccce5df2699" />
+        <option name="url" value="https://github.com/damnper/SpringDemoBot" />
+      </UrlAndAccount>
+    </option>
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
+  <component name="ProjectId" id="2Zts9LamwUNCdzNwFNLRp6X7k2M" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.SpringDemoBotApplication.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Daler/OWN/PROGRAMMING/JAVA PROJECTS/SpringDemoBot&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.6053358&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;
+  }
+}</component>
+  <component name="RunManager">
+    <configuration name="SpringDemoBotApplication" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="io.proj3ct.SpringDemoBot.SpringDemoBotApplication" />
+      <module name="SpringDemoBot" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="io.proj3ct.SpringDemoBot.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.SpringDemoBotApplication" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="jdk-21.0.1-openjdk-21.0.1-249ae16d76d6-a618e4d4" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="d178a8a2-6392-4a6b-b229-b099065e1c55" name="Changes" comment="" />
+      <created>1703252558188</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1703252558188</updated>
+    </task>
+    <task id="LOCAL-00001" summary="rework log errors; delete unuseful code;">
+      <option name="closed" value="true" />
+      <created>1703333996725</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1703333996725</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Working model: bot check post - send to subscribe user - if a post has already been sent to a user, it will not be resent again;">
+      <option name="closed" value="true" />
+      <created>1705401797642</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1705401797642</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Optimize some functions; add Studio and 6+ room buttons;">
+      <option name="closed" value="true" />
+      <created>1705405143283</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1705405143283</updated>
+    </task>
+    <task id="LOCAL-00004" summary="remove /cian func from BotCommand; add commands: /addtype, /removetype; add func sortValues to sort flats types' list for showMyData; optimize all func;">
+      <option name="closed" value="true" />
+      <created>1705570563499</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1705570563499</updated>
+    </task>
+    <task id="LOCAL-00005" summary="remove /cian func from BotCommand; add commands: /addtype, /removetype; add func sortValues to sort flats types' list for showMyData; optimize all func;">
+      <option name="closed" value="true" />
+      <created>1705657666114</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1705657666114</updated>
+    </task>
+    <task id="LOCAL-00006" summary="remove .idea folder">
+      <option name="closed" value="true" />
+      <created>1705658131829</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1705658131829</updated>
+    </task>
+    <task id="LOCAL-00007" summary="remove .idea folder">
+      <option name="closed" value="true" />
+      <created>1705658142596</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1705658142596</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
+    <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="rework log errors; delete unuseful code;" />
+    <MESSAGE value="Working model: bot check post - send to subscribe user - if a post has already been sent to a user, it will not be resent again;" />
+    <MESSAGE value="Optimize some functions; add Studio and 6+ room buttons;" />
+    <MESSAGE value="remove /cian func from BotCommand; add commands: /addtype, /removetype; add func sortValues to sort flats types' list for showMyData; optimize all func;" />
+    <MESSAGE value="remove .idea folder" />
+    <option name="LAST_COMMIT_MESSAGE" value="remove .idea folder" />
+  </component>
+</project>

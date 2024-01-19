@@ -5,12 +5,13 @@ target/
 **/src/test/**/target/
 
 ### IntelliJ IDEA ###
-.idea/
 .idea
 *.idea
 *.iws
 *.iml
 *.ipr
+
+.idea/
 
 src/main/resources/application.properties
 src/main/resources/logback.xml
